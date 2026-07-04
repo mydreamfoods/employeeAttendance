@@ -10,7 +10,475 @@
     --muted:#9aa3b2; --accent:#4f8cff; --present:#22c55e; --absent:#ef4444;
     --half:#f59e0b; --leave:#8b5cf6;
   }
+  *{box-sizing:border-box;}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Capture</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --border:#262b36; --text:#e8eaed;
+    --muted:#9aa3b2; --accent:#4f8cff; --present:#22c55e; --absent:#ef4444;
+    --half:#f59e0b; --leave:#8b5cf6;
+  }
   *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Segoe UI',system-ui,sans-serif;
+    padding:16px;
+  }
+  .wrap{max-width:720px;margin:0 auto;}
+  h1{font-size:20px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:16px;}
+  .topbar{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--border);
+    padding:12px;border-radius:10px;margin-bottom:14px;
+  }
+  .topbar label{font-size:13px;color:var(--muted);}
+  input[type=date]{
+    background:#0f1115;border:1px solid var(--border);color:var(--text);
+    padding:8px 10px;border-radius:8px;font-size:14px;
+  }
+  .btn{
+    border:none;border-radius:8px;padding:8px 14px;font-size:13px;
+    font-weight:600;cursor:pointer;color:#fff;
+  }
+  .btn-load{background:var(--accent);}
+  .btn-all-present{background:var(--present);}
+  .btn-save{background:var(--accent);width:100%;padding:13px;font-size:15px;margin-top:14px;}
+  .btn-save:disabled{opacity:.5;cursor:not-allowed;}
+  .search{
+    width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);
+    background:#0f1115;color:var(--text);font-size:14px;margin-bottom:10px;
+  }
+  .emp-list{display:flex;flex-direction:column;gap:8px;}
+  .emp-row{
+    display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;
+    background:var(--card);border:1px solid var(--border);
+    border-radius:10px;padding:10px 12px;
+  }
+  .emp-info{display:flex;flex-direction:column;}
+  .emp-name{font-size:14px;font-weight:600;}
+  .emp-id{font-size:11px;color:var(--muted);}
+  .status-group{display:flex;gap:6px;}
+  .status-btn{
+    border:1px solid var(--border);background:#0f1115;color:var(--muted);
+    padding:6px 0;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;
+    width:38px;text-align:center;
+  }
+  .status-btn.active[data-val="P"]{background:var(--present);color:#fff;border-color:var(--present);}
+  .status-btn.active[data-val="A"]{background:var(--absent);color:#fff;border-color:var(--absent);}
+  .status-btn.active[data-val="HD"]{background:var(--half);color:#fff;border-color:var(--half);}
+  .status-btn.active[data-val="H"]{background:var(--leave);color:#fff;border-color:var(--leave);}
+  #msg{margin-top:10px;font-size:13px;text-align:center;min-height:18px;}
+  #msg.ok{color:var(--present);}
+  #msg.err{color:var(--absent);}
+  .loading{text-align:center;color:var(--muted);padding:30px 0;font-size:14px;}
+  .count-bar{font-size:12px;color:var(--muted);margin-bottom:8px;}
+  .summary-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .chip{
+    flex:1;min-width:70px;text-align:center;padding:8px 6px;border-radius:8px;
+    font-size:12px;font-weight:700;color:#fff;
+  }
+  .chip .n{display:block;font-size:16px;}
+  .chip.p{background:var(--present);}
+  .chip.a{background:var(--absent);}
+  .chip.hd{background:var(--half);}
+  .chip.h{background:var(--leave);}
+  .add-emp-bar{margin-bottom:10px;}
+  .btn-add{background:transparent;border:1px solid var(--accent);color:var(--accent);padding:7px 12px;font-size:12px;}
+  .add-form{display:flex;gap:8px;margin-top:8px;}
+  .add-form input{
+    flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);
+    background:#0f1115;color:var(--text);font-size:14px;text-transform:uppercase;
+  }
+  .btn-add-confirm{background:var(--present);padding:8px 14px;font-size:13px;}
+  .btn-remove{
+    background:transparent;border:1px solid var(--absent);color:var(--absent);
+    width:26px;height:26px;border-radius:6px;font-size:14px;font-weight:700;
+    cursor:pointer;line-height:1;flex-shrink:0;
+  }
+  .tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);}
+  .tab-btn{
+    background:transparent;border:none;color:var(--muted);padding:10px 4px;
+    font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;
+    margin-right:14px;
+  }
+  .tab-btn.active{color:var(--text);border-bottom-color:var(--accent);}
+  table.report-table{width:100%;border-collapse:collapse;font-size:13px;}
+  table.report-table th, table.report-table td{
+    padding:9px 8px;text-align:center;border-bottom:1px solid var(--border);
+  }
+  table.report-table th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;}
+  table.report-table td:first-child, table.report-table th:first-child{text-align:left;}
+  table.report-table td.p{color:var(--present);font-weight:700;}
+  table.report-table td.a{color:var(--absent);font-weight:700;}
+  table.report-table td.hd{color:var(--half);font-weight:700;}
+  table.report-table td.h{color:var(--leave);font-weight:700;}
+  table.report-table td.total{color:var(--text);font-weight:700;}
+  tr.grand-row td{border-top:2px solid var(--accent);font-weight:800;background:#1c2030;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Attendance Capture</h1>
+  <div class="sub">Milky Malai Operations — daily attendance</div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabMark" onclick="switchTab('mark')">Mark Attendance</button>
+    <button class="tab-btn" id="tabReport" onclick="switchTab('report')">Reports</button>
+  </div>
+
+  <div id="markView">
+    <div class="topbar">
+      <div>
+        <label>Date</label><br>
+        <input type="date" id="dateInput">
+      </div>
+      <button class="btn btn-load" onclick="loadForDate()">Load</button>
+      <button class="btn btn-all-present" onclick="markAll('P')">Mark All Present</button>
+    </div>
+
+    <input type="text" class="search" id="searchBox" placeholder="Search employee..." oninput="renderList()">
+
+    <div class="add-emp-bar">
+      <button class="btn btn-add" id="addToggleBtn" onclick="toggleAddForm()">+ Add Employee</button>
+      <button class="btn btn-add" onclick="toggleInactiveView()">Show Deactivated</button>
+      <div id="addForm" class="add-form" style="display:none;">
+        <input type="text" id="newEmpName" placeholder="Employee name" oninput="this.value=this.value.toUpperCase()">
+        <button class="btn btn-add-confirm" onclick="addEmployee()">Add</button>
+      </div>
+    </div>
+
+    <div class="count-bar" id="countBar"></div>
+    <div class="summary-bar" id="summaryBar"></div>
+
+    <div id="empList" class="emp-list"><div class="loading">Loading employees...</div></div>
+
+    <button class="btn btn-save" id="saveBtn" onclick="saveAttendance()" disabled>Save Attendance</button>
+    <div id="msg"></div>
+  </div>
+
+  <div id="reportView" style="display:none;">
+    <div class="topbar">
+      <button class="btn btn-load" onclick="loadSummary()">Refresh</button>
+    </div>
+    <div id="summaryTableWrap"><div class="loading">Loading report...</div></div>
+  </div>
+</div>
+
+<script>
+// ====== CONFIG: replace with your deployed GAS Web App URL ======
+const GAS_URL = "https://script.google.com/macros/s/AKfycbx-tNS3leU11oZ0rmMNVTL77ZSoeLNBHhHP5t2bIJUugidMwfTzknuars1eE7EloDLu2w/exec";
+
+let employees = [];
+let attendance = {}; // { empId: status }
+let showInactive = false;
+let inactiveEmployees = [];
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+document.getElementById("dateInput").value = todayStr();
+
+function jsonp(url, cb){
+  const cbName = "cb_" + Date.now() + "_" + Math.floor(Math.random()*10000);
+  window[cbName] = function(data){
+    cb(data);
+    delete window[cbName];
+    document.body.removeChild(script);
+  };
+  const script = document.createElement("script");
+  script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cbName;
+  script.onerror = function(){ cb({status:"error", message:"Network/JSONP error"}); };
+  document.body.appendChild(script);
+}
+
+function loadEmployees(){
+  jsonp(GAS_URL + "?action=getEmployees", function(res){
+    if(res.status === "success"){
+      employees = res.employees;
+      loadForDate();
+    } else {
+      document.getElementById("empList").innerHTML = "<div class='loading'>Error: "+res.message+"</div>";
+    }
+  });
+}
+
+function toggleAddForm(){
+  const form = document.getElementById("addForm");
+  form.style.display = form.style.display === "none" ? "flex" : "none";
+  if(form.style.display === "flex") document.getElementById("newEmpName").focus();
+}
+
+function addEmployee(){
+  const input = document.getElementById("newEmpName");
+  const name = input.value.trim().toUpperCase();
+  if(!name){ showMsg("Enter a name first.", false); return; }
+
+  jsonp(GAS_URL + "?action=addEmployee&name=" + encodeURIComponent(name), function(res){
+    if(res.status === "success"){
+      employees.push({ empId: res.empId, name: res.name });
+      attendance[res.empId] = "";
+      input.value = "";
+      document.getElementById("addForm").style.display = "none";
+      renderList();
+      showMsg(`Added ${res.name} (${res.empId}).`, true);
+    } else {
+      showMsg("Error: " + res.message, false);
+    }
+  });
+}
+
+function removeEmployee(empId, name){
+  if(!confirm(`Deactivate ${name} (${empId})? They will stop appearing in the list.`)) return;
+
+  jsonp(GAS_URL + "?action=removeEmployee&empId=" + encodeURIComponent(empId), function(res){
+    if(res.status === "success"){
+      employees = employees.filter(e => e.empId !== empId);
+      delete attendance[empId];
+      renderList();
+      showMsg(`Deactivated ${name}.`, true);
+    } else {
+      showMsg("Error: " + res.message, false);
+    }
+  });
+}
+
+function loadForDate(){
+  const date = document.getElementById("dateInput").value;
+  attendance = {};
+  employees.forEach(e => attendance[e.empId] = ""); // default unset
+
+  jsonp(GAS_URL + "?action=getAttendance&date=" + date, function(res){
+    if(res.status === "success" && res.records){
+      res.records.forEach(r => {
+        if(attendance.hasOwnProperty(r.empId)) attendance[r.empId] = r.attendance;
+      });
+    }
+    renderList();
+  });
+}
+
+function switchTab(tab){
+  document.getElementById("tabMark").classList.toggle("active", tab === "mark");
+  document.getElementById("tabReport").classList.toggle("active", tab === "report");
+  document.getElementById("markView").style.display = tab === "mark" ? "block" : "none";
+  document.getElementById("reportView").style.display = tab === "report" ? "block" : "none";
+  if(tab === "report") loadSummary();
+}
+
+function loadSummary(){
+  document.getElementById("summaryTableWrap").innerHTML = "<div class='loading'>Loading report...</div>";
+  jsonp(GAS_URL + "?action=getSummary", function(res){
+    if(res.status !== "success"){
+      document.getElementById("summaryTableWrap").innerHTML = "<div class='loading'>Error: " + res.message + "</div>";
+      return;
+    }
+    if(res.rows.length === 0){
+      document.getElementById("summaryTableWrap").innerHTML = "<div class='loading'>No attendance records yet</div>";
+      return;
+    }
+    const rowsHtml = res.rows.map(r => {
+      const total = r.P + r.A + r.HD + r.H;
+      return `<tr>
+        <td>${r.date}</td>
+        <td class="p">${r.P}</td>
+        <td class="a">${r.A}</td>
+        <td class="hd">${r.HD}</td>
+        <td class="h">${r.H}</td>
+        <td class="total">${total}</td>
+      </tr>`;
+    }).join("");
+    const grand = res.rows.reduce((acc, r) => {
+      acc.P += r.P; acc.A += r.A; acc.HD += r.HD; acc.H += r.H;
+      return acc;
+    }, { P: 0, A: 0, HD: 0, H: 0 });
+    const grandTotal = grand.P + grand.A + grand.HD + grand.H;
+    const grandRow = `<tr class="grand-row">
+      <td>GRAND TOTAL</td>
+      <td class="p">${grand.P}</td>
+      <td class="a">${grand.A}</td>
+      <td class="hd">${grand.HD}</td>
+      <td class="h">${grand.H}</td>
+      <td class="total">${grandTotal}</td>
+    </tr>`;
+    document.getElementById("summaryTableWrap").innerHTML = `
+      <table class="report-table">
+        <thead><tr><th>Date</th><th>Present</th><th>Absent</th><th>Half Day</th><th>Holiday</th><th>Total</th></tr></thead>
+        <tbody>${rowsHtml}${grandRow}</tbody>
+      </table>`;
+  });
+}
+
+function toggleInactiveView(){
+  showInactive = !showInactive;
+  if(showInactive){
+    jsonp(GAS_URL + "?action=getEmployees&includeInactive=true", function(res){
+      if(res.status === "success"){
+        inactiveEmployees = res.employees.filter(e => !e.active);
+        renderList();
+      } else {
+        showMsg("Error: " + res.message, false);
+      }
+    });
+  } else {
+    renderList();
+  }
+}
+
+function restoreEmployee(empId, name){
+  jsonp(GAS_URL + "?action=activateEmployee&empId=" + encodeURIComponent(empId), function(res){
+    if(res.status === "success"){
+      inactiveEmployees = inactiveEmployees.filter(e => e.empId !== empId);
+      employees.push({ empId: empId, name: name });
+      attendance[empId] = "";
+      renderList();
+      showMsg(`Restored ${name}.`, true);
+    } else {
+      showMsg("Error: " + res.message, false);
+    }
+  });
+}
+
+function renderList(){
+  const list = document.getElementById("empList");
+
+  if(showInactive){
+    document.getElementById("countBar").textContent = `${inactiveEmployees.length} deactivated`;
+    document.getElementById("saveBtn").style.display = "none";
+    document.getElementById("searchBox").style.display = "none";
+    if(inactiveEmployees.length === 0){
+      list.innerHTML = "<div class='loading'>No deactivated employees</div>";
+    } else {
+      list.innerHTML = inactiveEmployees.map(e => `<div class="emp-row">
+        <div class="emp-info">
+          <span class="emp-name">${e.name}</span>
+          <span class="emp-id">${e.empId}</span>
+        </div>
+        <button type="button" class="btn btn-add-confirm" onclick="restoreEmployee('${e.empId}','${e.name.replace(/'/g,"\\'")}')">Restore</button>
+      </div>`).join("");
+    }
+    updateSummary();
+    return;
+  }
+
+  document.getElementById("saveBtn").style.display = "block";
+  document.getElementById("searchBox").style.display = "block";
+
+  const q = document.getElementById("searchBox").value.toLowerCase();
+  const filtered = employees.filter(e =>
+    e.name.toLowerCase().includes(q) || e.empId.toLowerCase().includes(q)
+  );
+
+  if(filtered.length === 0){
+    list.innerHTML = "<div class='loading'>No employees found</div>";
+  } else {
+    list.innerHTML = filtered.map(e => {
+      const status = attendance[e.empId] || "";
+      const statuses = ["P","A","HD","H"];
+      return `<div class="emp-row">
+        <div class="emp-info">
+          <span class="emp-name">${e.name}</span>
+          <span class="emp-id">${e.empId}</span>
+        </div>
+        <div class="status-group">
+          ${statuses.map(s => `<button type="button" class="status-btn ${status===s?'active':''}" data-val="${s}" onclick="setStatus('${e.empId}','${s}', this)">${s}</button>`).join("")}
+        </div>
+        <button type="button" class="btn-remove" onclick="removeEmployee('${e.empId}','${e.name.replace(/'/g,"\\'")}')" title="Deactivate employee">×</button>
+      </div>`;
+    }).join("");
+  }
+
+  const marked = Object.values(attendance).filter(v => v).length;
+  document.getElementById("countBar").textContent = `${marked} / ${employees.length} marked`;
+  document.getElementById("saveBtn").disabled = employees.length === 0;
+  updateSummary();
+}
+
+function updateSummary(){
+  const bar = document.getElementById("summaryBar");
+  if(showInactive){ bar.innerHTML = ""; return; }
+
+  const counts = { P: 0, A: 0, HD: 0, H: 0 };
+  Object.values(attendance).forEach(v => { if(counts.hasOwnProperty(v)) counts[v]++; });
+
+  bar.innerHTML = `
+    <div class="chip p"><span class="n">${counts.P}</span>Present</div>
+    <div class="chip a"><span class="n">${counts.A}</span>Absent</div>
+    <div class="chip hd"><span class="n">${counts.HD}</span>Half Day</div>
+    <div class="chip h"><span class="n">${counts.H}</span>Holiday</div>
+  `;
+}
+
+function setStatus(empId, status, btnEl){
+  attendance[empId] = status;
+  const row = btnEl.closest(".emp-row");
+  row.querySelectorAll(".status-btn").forEach(b => b.classList.remove("active"));
+  btnEl.classList.add("active");
+  const marked = Object.values(attendance).filter(v => v).length;
+  document.getElementById("countBar").textContent = `${marked} / ${employees.length} marked`;
+  updateSummary();
+}
+
+function markAll(status){
+  employees.forEach(e => attendance[e.empId] = status);
+  renderList();
+}
+
+async function saveAttendance(){
+  const date = document.getElementById("dateInput").value;
+  const rows = employees
+    .filter(e => attendance[e.empId])
+    .map(e => ({ empId: e.empId, name: e.name, attendance: attendance[e.empId] }));
+
+  if(rows.length === 0){
+    showMsg("Mark at least one employee before saving.", false);
+    return;
+  }
+
+  document.getElementById("saveBtn").disabled = true;
+
+  const chunkSize = 15;
+  const chunks = [];
+  for(let i = 0; i < rows.length; i += chunkSize) chunks.push(rows.slice(i, i + chunkSize));
+
+  let savedCount = 0;
+  for(let idx = 0; idx < chunks.length; idx++){
+    showMsg(`Saving ${idx+1}/${chunks.length}...`, true);
+    const payload = encodeURIComponent(JSON.stringify({ date: date, rows: chunks[idx] }));
+    const clearFlag = idx === 0 ? "true" : "false";
+
+    const res = await new Promise(resolve => {
+      jsonp(GAS_URL + "?action=saveAttendance&clear=" + clearFlag + "&payload=" + payload, resolve);
+    });
+
+    if(res.status !== "success"){
+      document.getElementById("saveBtn").disabled = false;
+      showMsg("Error: " + res.message, false);
+      return;
+    }
+    savedCount += res.count;
+  }
+
+  document.getElementById("saveBtn").disabled = false;
+  showMsg(`Saved ${savedCount} records for ${date}.`, true);
+}
+
+function showMsg(text, ok){
+  const el = document.getElementById("msg");
+  el.textContent = text;
+  el.className = ok ? "ok" : "err";
+}
+
+loadEmployees();
+</script>
+</body>
+</html>
+
   body{
     margin:0; background:var(--bg); color:var(--text);
     font-family:'Segoe UI',system-ui,sans-serif;
