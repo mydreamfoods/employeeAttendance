@@ -8,7 +8,7 @@
   :root{
     --bg:#0b0d12; --panel:#161a22; --panel2:#1e2430; --border:#2a3140;
     --text:#eef1f7; --muted:#8b93a3; --accent:#5b8cff; --accent2:#8b5bff;
-    --p:#2fbf6b; --a:#ef4759; --hd:#f0b429; --h:#a06bff;
+    --p:#2fbf6b; --a:#ef4759; --hd:#f0b429; --h:#a06bff; --ph:#2bb7c7;
   }
   *{box-sizing:border-box;}
   body{
@@ -90,6 +90,7 @@
   .sbtn.sel-A{background:var(--a);color:#fff;border-color:var(--a);box-shadow:0 0 0 3px rgba(239,71,89,.25);}
   .sbtn.sel-HD{background:var(--hd);color:#1a1a1a;border-color:var(--hd);box-shadow:0 0 0 3px rgba(240,180,41,.25);}
   .sbtn.sel-H{background:var(--h);color:#fff;border-color:var(--h);box-shadow:0 0 0 3px rgba(160,107,255,.25);}
+  .sbtn.sel-PH{background:var(--ph);color:#fff;border-color:var(--ph);box-shadow:0 0 0 3px rgba(43,183,199,.25);}
   .markall-btn{
     border:1px solid var(--border);border-radius:9px;padding:7px 14px;font-size:12px;font-weight:700;
     cursor:pointer;color:#fff;transition:transform .12s ease, filter .12s ease;box-shadow:none;
@@ -98,6 +99,20 @@
   .markall-P{background:var(--p);}
   .markall-A{background:var(--a);}
   .markall-H{background:var(--h);}
+  .markall-PH{background:var(--ph);}
+
+  /* status color coding for report/date-summary day cells */
+  .day-P{background:rgba(47,191,107,.16);color:var(--p);font-weight:700;}
+  .day-A{background:rgba(239,71,89,.16);color:var(--a);font-weight:700;}
+  .day-HD{background:rgba(240,180,41,.16);color:var(--hd);font-weight:700;}
+  .day-H{background:rgba(160,107,255,.16);color:var(--h);font-weight:700;}
+  .day-PH{background:rgba(43,183,199,.16);color:var(--ph);font-weight:700;}
+
+  /* freeze header row while scrolling the report table */
+  #reportCard.table-scroll{max-height:65vh;overflow-y:auto;}
+  #reportTable thead th{position:sticky;top:0;z-index:2;background:var(--panel2);box-shadow:0 1px 0 var(--border);}
+  #reportTable thead th:first-child, #reportTable tbody td:first-child{position:sticky;left:0;z-index:1;background:var(--panel);}
+  #reportTable thead th:first-child{z-index:3;}
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
     background:var(--panel2);border:1px solid var(--border);padding:13px 20px;border-radius:12px;
@@ -206,16 +221,20 @@
     <div class="card" id="entryCard" style="display:none;">
       <div class="row" style="justify-content:space-between;margin-bottom:12px;">
         <div class="muted" id="entryMeta"></div>
-        <button onclick="saveAttendance()">Save Attendance</button>
+        <div class="row" style="gap:8px;">
+          <button class="secondary" onclick="downloadEntryExcel()">Download Excel</button>
+          <button onclick="saveAttendance()">Save Attendance</button>
+        </div>
       </div>
       <div class="row" style="margin-bottom:8px;">
         <span class="muted" style="margin-right:4px;">Mark all:</span>
         <button type="button" class="markall-btn markall-P" onclick="markAll('P')">All Present</button>
         <button type="button" class="markall-btn markall-A" onclick="markAll('A')">All Absent</button>
-        <button type="button" class="markall-btn markall-H" onclick="markAll('H')">All Holiday</button>
+        <button type="button" class="markall-btn markall-H" onclick="markAll('H')">All Week Off</button>
+        <button type="button" class="markall-btn markall-PH" onclick="markAll('PH')">All Paid Holiday</button>
       </div>
       <div class="table-scroll">
-        <table>
+        <table id="entryTable">
           <thead><tr><th>EMP ID</th><th>Name</th><th>Status</th></tr></thead>
           <tbody id="entryBody"></tbody>
         </table>
@@ -256,9 +275,12 @@
       <div class="suggest hidden" id="nameSuggest"></div>
     </div>
     <div class="card">
-      <h3 style="margin-top:0;">Employee List</h3>
+      <div class="row" style="justify-content:space-between;">
+        <h3 style="margin:0;">Employee List</h3>
+        <button class="secondary" onclick="downloadExcel('empListTable','Employee_List.xlsx')">Download Excel</button>
+      </div>
       <div class="table-scroll">
-        <table>
+        <table id="empListTable">
           <thead><tr><th>EMP ID</th><th>Name</th><th>Supervisor</th><th>Company</th><th>Status</th></tr></thead>
           <tbody id="empListBody"></tbody>
         </table>
@@ -303,7 +325,10 @@
       </div>
     </div>
     <div class="card table-scroll" id="reportCard" style="display:none;">
-      <div class="muted" id="reportMeta" style="margin-bottom:10px;"></div>
+      <div class="row" style="justify-content:space-between;margin-bottom:10px;">
+        <div class="muted" id="reportMeta"></div>
+        <button class="secondary" onclick="downloadExcel('reportTable','Attendance_Report.xlsx')">Download Excel</button>
+      </div>
       <table id="reportTable" style="min-width:1400px;">
         <thead><tr id="reportHeadRow"></tr></thead>
         <tbody id="reportBody"></tbody>
@@ -338,10 +363,13 @@
       </div>
     </div>
     <div class="card" id="dsCard" style="display:none;">
-      <div class="muted" id="dsMeta" style="margin-bottom:10px;"></div>
+      <div class="row" style="justify-content:space-between;margin-bottom:10px;">
+        <div class="muted" id="dsMeta"></div>
+        <button class="secondary" onclick="downloadExcel('dsTable','Date_Summary.xlsx')">Download Excel</button>
+      </div>
       <div class="table-scroll">
-        <table>
-          <thead><tr><th>Date</th><th>Total</th><th>Present</th><th>Absent</th><th>Holiday</th><th>Half Day</th></tr></thead>
+        <table id="dsTable">
+          <thead><tr><th>Date</th><th>Total</th><th>Present</th><th>Absent</th><th>Week Off</th><th>Half Day</th><th>Paid Holiday</th></tr></thead>
           <tbody id="dsBody"></tbody>
         </table>
       </div>
@@ -352,6 +380,31 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+function downloadExcel(tableId, filename) {
+  const table = document.getElementById(tableId);
+  if (!table || !table.querySelector('tbody').children.length) return toast('Nothing to export yet — run the report first');
+  const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
+  XLSX.writeFile(wb, filename);
+}
+function downloadExcelFromRows(headers, rows, filename) {
+  if (!rows.length) return toast('Nothing to export yet — load data first');
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, filename);
+}
+function downloadEntryExcel() {
+  const rows = [...document.querySelectorAll('#entryBody tr')].map(tr => {
+    const empId = tr.children[0].textContent;
+    const name = tr.children[1].textContent;
+    const selected = tr.querySelector('button[class*="sel-"]');
+    return [empId, name, selected ? selected.dataset.status : ''];
+  });
+  downloadExcelFromRows(['EMP ID', 'Name', 'Status'], rows, 'Attendance_Entry.xlsx');
+}
+</script>
 <script>
 // ⚠️ Paste your Apps Script Web App /exec URL here
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-tNS3leU11oZ0rmMNVTL77ZSoeLNBHhHP5t2bIJUugidMwfTzknuars1eE7EloDLu2w/exec";
@@ -422,7 +475,7 @@ async function loadDateSummary() {
   tbody.innerHTML = '';
   res.summary.forEach(s => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${s.day}</td><td>${s.total}</td><td>${s.present}</td><td>${s.absent}</td><td>${s.holiday}</td><td>${s.halfDay}</td>`;
+    tr.innerHTML = `<td>${s.day}</td><td>${s.total}</td><td>${s.present}</td><td>${s.absent}</td><td>${s.holiday}</td><td>${s.halfDay}</td><td>${s.paidHoliday}</td>`;
     tbody.appendChild(tr);
   });
   document.getElementById('dsMeta').textContent = `${month} ${year}${supervisor ? ' — ' + supervisor : ''} — ${res.employeeCount} employee row(s)`;
@@ -442,7 +495,11 @@ function onRepEmpIdInput() {
   const idVal = document.getElementById('repEmpId').value.trim();
   if (!idVal) return;
   const match = allEmployees.find(e => normIdClient(e.empId) === normIdClient(idVal));
-  if (!match) return;
+  if (!match) {
+    document.getElementById('repName').value = '';
+    toast(`EMP ID ${idVal} not found in EMP tab`);
+    return;
+  }
   document.getElementById('repName').value = match.name;
   const supSel = document.getElementById('repSupervisor');
   if (match.supervisor && [...supSel.options].some(o => o.value === match.supervisor)) {
@@ -463,15 +520,15 @@ async function loadReport() {
   const headRow = document.getElementById('reportHeadRow');
   headRow.innerHTML = '<th>EMP ID</th><th>Name</th>' +
     Array.from({length:31}, (_,i) => `<th>${i+1}</th>`).join('') +
-    '<th>Total</th><th>Present</th><th>Absent</th><th>Holiday</th><th>Half Day</th>';
+    '<th>Total</th><th>Present</th><th>Absent</th><th>Week Off</th><th>Half Day</th><th>Paid Holiday</th>';
 
   const tbody = document.getElementById('reportBody');
   tbody.innerHTML = '';
   res.rows.forEach(r => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${r.empId}</td><td>${r.name}</td>` +
-      r.days.map(d => `<td>${d}</td>`).join('') +
-      `<td>${r.total}</td><td>${r.present}</td><td>${r.absent}</td><td>${r.holiday}</td><td>${r.halfDay}</td>`;
+      r.days.map(d => `<td class="${d ? 'day-'+d : ''}">${d}</td>`).join('') +
+      `<td>${r.total}</td><td>${r.present}</td><td>${r.absent}</td><td>${r.holiday}</td><td>${r.halfDay}</td><td>${r.paidHoliday}</td>`;
     tbody.appendChild(tr);
   });
   document.getElementById('reportMeta').textContent = `${res.rows.length} employee-month row(s)`;
@@ -535,7 +592,7 @@ async function loadDate() {
       <td>${rec.empId}</td>
       <td>${rec.name}</td>
       <td class="statusbtns" data-empid="${rec.empId}">
-        ${['P','A','HD','H'].map(s => `<button type="button" class="sbtn ${rec.status===s?'sel-'+s:''}" data-status="${s}" onclick="setStatus(this)">${s}</button>`).join('')}
+        ${['P','A','HD','H','PH'].map(s => `<button type="button" class="sbtn ${rec.status===s?'sel-'+s:''}" data-status="${s}" onclick="setStatus(this)">${s==='H'?'WO':s}</button>`).join('')}
       </td>`;
     tbody.appendChild(tr);
   });
@@ -671,9 +728,23 @@ async function addEmployee() {
   loadSupervisors();
 }
 
+function setTodayDefaults() {
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const today = new Date();
+  const y = today.getFullYear(), m = MONTHS[today.getMonth()], d = today.getDate();
+  document.getElementById('yearInput').value = y;
+  document.getElementById('monthInput').value = m;
+  document.getElementById('dayInput').value = d;
+  document.getElementById('repYear').value = y;
+  document.getElementById('repMonth').value = m;
+  document.getElementById('dsYear').value = y;
+  document.getElementById('dsMonth').value = m;
+}
+
 // init
 loadEmployeeList();
 loadSupervisors();
+setTodayDefaults();
 </script>
 
 </body>
