@@ -460,6 +460,8 @@ async function loadDsSupervisors() {
   const sel = document.getElementById('dsSupervisor');
   if (sel.options.length <= 1) {
     sel.innerHTML = '<option value="">All</option>' + supervisors.map(s => `<option value="${s}">${s}</option>`).join('');
+    const defaultMatch = supervisors.find(s => s.trim().toUpperCase() === 'SAWAN');
+    if (defaultMatch) sel.value = defaultMatch;
   }
 }
 
@@ -488,6 +490,8 @@ async function loadReportSupervisors() {
   const sel = document.getElementById('repSupervisor');
   if (sel.options.length <= 1) {
     sel.innerHTML = '<option value="">All</option>' + supervisors.map(s => `<option value="${s}">${s}</option>`).join('');
+    const defaultMatch = supervisors.find(s => s.trim().toUpperCase() === 'SAWAN');
+    if (defaultMatch) sel.value = defaultMatch;
   }
 }
 
@@ -544,6 +548,8 @@ async function loadSupervisors() {
   const sel = document.getElementById('supervisorInput');
   sel.innerHTML = '<option value="">Select supervisor...</option>' +
     supervisors.map(s => `<option value="${s}">${s}</option>`).join('');
+  const defaultMatch = supervisors.find(s => s.trim().toUpperCase() === 'SAWAN');
+  if (defaultMatch) sel.value = defaultMatch;
 }
 
 async function loadMonth() {
