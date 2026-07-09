@@ -110,12 +110,18 @@
 
   /* freeze header row + first two columns (EMP ID, Name) while scrolling the report table */
   #reportCard.table-scroll{max-height:65vh;overflow-y:auto;}
+  #reportTable{border-collapse:separate;border-spacing:0;}
   #reportTable thead th{position:sticky;top:0;z-index:2;background:var(--panel2);box-shadow:0 1px 0 var(--border);}
-  #reportTable th:nth-child(1), #reportTable td:nth-child(1){position:sticky;left:0;z-index:1;background:var(--panel);min-width:70px;}
-  #reportTable th:nth-child(2), #reportTable td:nth-child(2){position:sticky;left:70px;z-index:1;background:var(--panel);min-width:150px;}
+  #reportTable th:nth-child(1), #reportTable td:nth-child(1){position:sticky;left:0;z-index:1;background:var(--panel);width:44px;min-width:44px;max-width:44px;padding-left:6px;padding-right:6px;line-height:1.2;}
+  #reportTable th:nth-child(2), #reportTable td:nth-child(2){position:sticky;left:44px;z-index:1;background:var(--panel);min-width:120px;border-right:1px solid var(--border);}
   #reportTable thead th:nth-child(1){z-index:3;}
   #reportTable thead th:nth-child(2){z-index:3;}
-  #reportTable td:nth-last-child(-n+6), #reportTable th:nth-last-child(-n+6){text-align:center;}
+  #reportTable td:nth-last-child(-n+6), #reportTable th:nth-last-child(-n+6){text-align:center;border-left:1px solid var(--border);}
+
+  #dsTable{border-collapse:separate;border-spacing:0;}
+  #dsTable th, #dsTable td{text-align:center;border-left:1px solid var(--border);}
+  #dsTable th:first-child, #dsTable td:first-child{border-left:none;}
+  #dsTable tr.grand-total td{font-weight:700;color:var(--text);background:rgba(91,140,255,.08);border-top:2px solid var(--accent);}
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
     background:var(--panel2);border:1px solid var(--border);padding:13px 20px;border-radius:12px;
@@ -368,7 +374,7 @@
     <div class="card" id="dsCard" style="display:none;">
       <div class="row" style="justify-content:space-between;margin-bottom:10px;">
         <div class="muted" id="dsMeta"></div>
-        <button class="secondary" onclick="downloadExcel('dsTable','Date_Summary.xlsx')">Download Excel</button>
+        <button class="secondary" onclick="downloadDateSummaryExcel()">Download Excel</button>
       </div>
       <div class="table-scroll">
         <table id="dsTable">
@@ -406,6 +412,30 @@ function downloadEntryExcel() {
     return [empId, name, selected ? selected.dataset.status : ''];
   });
   downloadExcelFromRows(['EMP ID', 'Name', 'Status'], rows, 'Attendance_Entry.xlsx');
+}
+
+function downloadDateSummaryExcel() {
+  if (!lastDsSummary.length) return toast('Nothing to export yet — run the summary first');
+  const header = ['Date', 'Total', 'Present', 'Absent', 'Half Day', 'Week Off', 'Paid Holiday'];
+  const rows = lastDsSummary.map(s => [s.day, s.total, s.present, s.absent, s.halfDay, s.holiday, s.paidHoliday]);
+  rows.push(['Grand Total', lastDsGrand.total, lastDsGrand.present, lastDsGrand.absent, lastDsGrand.halfDay, lastDsGrand.holiday, lastDsGrand.paidHoliday]);
+
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [{ wch: 12 }, { wch: 8 }, { wch: 9 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 12 }];
+  const headerStyle = { font: { bold: true }, fill: { fgColor: { rgb: 'E2E8F0' } } };
+  header.forEach((_, c) => {
+    const ref = XLSX.utils.encode_cell({ r: 0, c });
+    if (ws[ref]) ws[ref].s = headerStyle;
+  });
+  const lastRow = rows.length;
+  header.forEach((_, c) => {
+    const ref = XLSX.utils.encode_cell({ r: lastRow, c });
+    if (ws[ref]) ws[ref].s = { font: { bold: true } };
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Date Summary');
+  XLSX.writeFile(wb, 'Date_Summary.xlsx', { cellStyles: true });
 }
 </script>
 <script>
@@ -468,6 +498,9 @@ async function loadDsSupervisors() {
   }
 }
 
+let lastDsSummary = [];
+let lastDsGrand = null;
+
 async function loadDateSummary() {
   const supervisor = document.getElementById('dsSupervisor').value;
   const year = document.getElementById('dsYear').value;
@@ -478,11 +511,20 @@ async function loadDateSummary() {
 
   const tbody = document.getElementById('dsBody');
   tbody.innerHTML = '';
+  const grand = { total: 0, present: 0, absent: 0, halfDay: 0, holiday: 0, paidHoliday: 0 };
   res.summary.forEach(s => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${s.day}</td><td>${s.total}</td><td>${s.present}</td><td>${s.absent}</td><td>${s.halfDay}</td><td>${s.holiday}</td><td>${s.paidHoliday}</td>`;
     tbody.appendChild(tr);
+    grand.total += s.total; grand.present += s.present; grand.absent += s.absent;
+    grand.halfDay += s.halfDay; grand.holiday += s.holiday; grand.paidHoliday += s.paidHoliday;
   });
+  const gtr = document.createElement('tr');
+  gtr.className = 'grand-total';
+  gtr.innerHTML = `<td>Grand Total</td><td>${grand.total}</td><td>${grand.present}</td><td>${grand.absent}</td><td>${grand.halfDay}</td><td>${grand.holiday}</td><td>${grand.paidHoliday}</td>`;
+  tbody.appendChild(gtr);
+  lastDsSummary = res.summary;
+  lastDsGrand = grand;
   document.getElementById('dsMeta').textContent = `${month} ${year}${supervisor ? ' — ' + supervisor : ''} — ${res.employeeCount} employee row(s)`;
   document.getElementById('dsCard').style.display = 'block';
 }
@@ -525,7 +567,7 @@ async function loadReport() {
   if (!res.success) return toast('Error: ' + res.error);
 
   const headRow = document.getElementById('reportHeadRow');
-  headRow.innerHTML = '<th>EMP ID</th><th>Name</th>' +
+  headRow.innerHTML = '<th>EMP<br>ID</th><th>Name</th>' +
     Array.from({length:31}, (_,i) => `<th>${i+1}</th>`).join('') +
     '<th>Total</th><th>Present</th><th>Absent</th><th>Half Day</th><th>Week Off</th><th>Paid Holiday</th>';
 
