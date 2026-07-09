@@ -372,7 +372,7 @@
       </div>
       <div class="table-scroll">
         <table id="dsTable">
-          <thead><tr><th>Date</th><th>Total</th><th>Present</th><th>Absent</th><th>Week Off</th><th>Half Day</th><th>Paid Holiday</th></tr></thead>
+          <thead><tr><th>Date</th><th>Total</th><th>Present</th><th>Absent</th><th>Half Day</th><th>Week Off</th><th>Paid Holiday</th></tr></thead>
           <tbody id="dsBody"></tbody>
         </table>
       </div>
@@ -480,7 +480,7 @@ async function loadDateSummary() {
   tbody.innerHTML = '';
   res.summary.forEach(s => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${s.day}</td><td>${s.total}</td><td>${s.present}</td><td>${s.absent}</td><td>${s.holiday}</td><td>${s.halfDay}</td><td>${s.paidHoliday}</td>`;
+    tr.innerHTML = `<td>${s.day}</td><td>${s.total}</td><td>${s.present}</td><td>${s.absent}</td><td>${s.halfDay}</td><td>${s.holiday}</td><td>${s.paidHoliday}</td>`;
     tbody.appendChild(tr);
   });
   document.getElementById('dsMeta').textContent = `${month} ${year}${supervisor ? ' — ' + supervisor : ''} — ${res.employeeCount} employee row(s)`;
@@ -527,7 +527,7 @@ async function loadReport() {
   const headRow = document.getElementById('reportHeadRow');
   headRow.innerHTML = '<th>EMP ID</th><th>Name</th>' +
     Array.from({length:31}, (_,i) => `<th>${i+1}</th>`).join('') +
-    '<th>Total</th><th>Present</th><th>Absent</th><th>Week Off</th><th>Half Day</th><th>Paid Holiday</th>';
+    '<th>Total</th><th>Present</th><th>Absent</th><th>Half Day</th><th>Week Off</th><th>Paid Holiday</th>';
 
   const tbody = document.getElementById('reportBody');
   tbody.innerHTML = '';
@@ -535,7 +535,7 @@ async function loadReport() {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${r.empId}</td><td>${r.name}</td>` +
       r.days.map(d => `<td class="${d ? 'day-'+d : ''}">${d === 'H' ? 'WO' : d}</td>`).join('') +
-      `<td>${r.total}</td><td>${r.present}</td><td>${r.absent}</td><td>${r.holiday}</td><td>${r.halfDay}</td><td>${r.paidHoliday}</td>`;
+      `<td>${r.total}</td><td>${r.present}</td><td>${r.absent}</td><td>${r.halfDay}</td><td>${r.holiday}</td><td>${r.paidHoliday}</td>`;
     tbody.appendChild(tr);
   });
   document.getElementById('reportMeta').textContent = `${res.rows.length} employee-month row(s)`;
