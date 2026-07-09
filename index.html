@@ -122,6 +122,8 @@
   #dsTable th, #dsTable td{text-align:center;border-left:1px solid var(--border);}
   #dsTable th:first-child, #dsTable td:first-child{border-left:none;}
   #dsTable tr.grand-total td{font-weight:700;color:var(--text);background:rgba(91,140,255,.08);border-top:2px solid var(--accent);}
+  #reportTable tr.grand-total td{font-weight:700;color:var(--text);background:rgba(91,140,255,.08);border-top:2px solid var(--accent);position:sticky;bottom:0;}
+  #reportTable tr.grand-total td:nth-child(1),#reportTable tr.grand-total td:nth-child(2){z-index:2;}
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
     background:var(--panel2);border:1px solid var(--border);padding:13px 20px;border-radius:12px;
@@ -336,7 +338,7 @@
     <div class="card table-scroll" id="reportCard" style="display:none;">
       <div class="row" style="justify-content:space-between;margin-bottom:10px;">
         <div class="muted" id="reportMeta"></div>
-        <button class="secondary" onclick="downloadExcel('reportTable','Attendance_Report.xlsx')">Download Excel</button>
+        <button class="secondary" onclick="downloadReportExcel()">Download Excel</button>
       </div>
       <table id="reportTable" style="min-width:1400px;">
         <thead><tr id="reportHeadRow"></tr></thead>
@@ -412,6 +414,43 @@ function downloadEntryExcel() {
     return [empId, name, selected ? selected.dataset.status : ''];
   });
   downloadExcelFromRows(['EMP ID', 'Name', 'Status'], rows, 'Attendance_Entry.xlsx');
+}
+
+function downloadReportExcel() {
+  if (!lastReportRows.length) return toast('Nothing to export yet — run the report first');
+  const dayHeaders = Array.from({length:31}, (_,i) => String(i+1));
+  const header = ['EMP ID', 'Name', ...dayHeaders, 'Total', 'Present', 'Absent', 'Half Day', 'Week Off', 'Paid Holiday'];
+  const rows = lastReportRows.map(r => [
+    r.empId, r.name,
+    ...r.days.map(d => d === 'H' ? 'WO' : d),
+    r.total, r.present, r.absent, r.halfDay, r.holiday, r.paidHoliday
+  ]);
+  rows.push([
+    '—', 'Grand Total', ...Array(31).fill(''),
+    lastReportGrand.total, lastReportGrand.present, lastReportGrand.absent,
+    lastReportGrand.halfDay, lastReportGrand.holiday, lastReportGrand.paidHoliday
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [
+    { wch: 8 }, { wch: 20 },
+    ...Array(31).fill({ wch: 4 }),
+    { wch: 7 }, { wch: 8 }, { wch: 7 }, { wch: 9 }, { wch: 9 }, { wch: 11 }
+  ];
+  const headerStyle = { font: { bold: true }, fill: { fgColor: { rgb: 'E2E8F0' } } };
+  header.forEach((_, c) => {
+    const ref = XLSX.utils.encode_cell({ r: 0, c });
+    if (ws[ref]) ws[ref].s = headerStyle;
+  });
+  const lastRow = rows.length;
+  header.forEach((_, c) => {
+    const ref = XLSX.utils.encode_cell({ r: lastRow, c });
+    if (ws[ref]) ws[ref].s = { font: { bold: true } };
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Report');
+  XLSX.writeFile(wb, 'Attendance_Report.xlsx', { cellStyles: true });
 }
 
 function downloadDateSummaryExcel() {
@@ -556,6 +595,9 @@ function onRepEmpIdInput() {
   }
 }
 
+let lastReportRows = [];
+let lastReportGrand = null;
+
 async function loadReport() {
   const supervisor = document.getElementById('repSupervisor').value;
   const year = document.getElementById('repYear').value;
@@ -573,13 +615,26 @@ async function loadReport() {
 
   const tbody = document.getElementById('reportBody');
   tbody.innerHTML = '';
+  const grand = { total: 0, present: 0, absent: 0, halfDay: 0, holiday: 0, paidHoliday: 0 };
   res.rows.forEach(r => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${r.empId}</td><td>${r.name}</td>` +
       r.days.map(d => `<td class="${d ? 'day-'+d : ''}">${d === 'H' ? 'WO' : d}</td>`).join('') +
       `<td>${r.total}</td><td>${r.present}</td><td>${r.absent}</td><td>${r.halfDay}</td><td>${r.holiday}</td><td>${r.paidHoliday}</td>`;
     tbody.appendChild(tr);
+    grand.total += r.total; grand.present += r.present; grand.absent += r.absent;
+    grand.halfDay += r.halfDay; grand.holiday += r.holiday; grand.paidHoliday += r.paidHoliday;
   });
+  if (res.rows.length) {
+    const gtr = document.createElement('tr');
+    gtr.className = 'grand-total';
+    gtr.innerHTML = `<td>—</td><td>Grand Total</td>` +
+      Array.from({length:31}, () => '<td></td>').join('') +
+      `<td>${grand.total}</td><td>${grand.present}</td><td>${grand.absent}</td><td>${grand.halfDay}</td><td>${grand.holiday}</td><td>${grand.paidHoliday}</td>`;
+    tbody.appendChild(gtr);
+  }
+  lastReportRows = res.rows;
+  lastReportGrand = grand;
   document.getElementById('reportMeta').textContent = `${res.rows.length} employee-month row(s)`;
   document.getElementById('reportCard').style.display = 'block';
   if (!res.rows.length) toast('No matching records');
